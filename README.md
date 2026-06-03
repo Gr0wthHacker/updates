@@ -61,8 +61,11 @@ the audience is someone deciding whether to read more.
 - `acquisition` — exit / M&A event
 - `milestone` — generic numerical milestone (10K users, $1M ARR, etc.)
 
-Add a new category by using it. The consumer renders unknown categories with a
-neutral label.
+Adding a new category means editing both the README list *and* the enum in
+[`schema/update.schema.json`](schema/update.schema.json) in the same PR.
+Strict schema is intentional — catches typos at validation time, surfaces real
+taxonomy growth at review time. Don't push entries with unknown categories;
+the build script will reject them.
 
 ### Ventures
 
@@ -73,6 +76,9 @@ neutral label.
 - `multistatemd`
 - `whitecoat-alliance`
 - `personal` — anything not tied to a venture
+
+Same rule as categories: extend via PR that updates both the README list and
+the schema enum.
 
 ## Editorial rules
 
@@ -98,6 +104,9 @@ Five rules. Break them with intent, not accident.
 # 3. The site picks it up on next deploy.
 ```
 
+If a Netlify build hook is wired (see [`.github/workflows/notify-deploy.yml`](.github/workflows/notify-deploy.yml)),
+the push auto-triggers a jackgierlich.com rebuild — usually live within ~2 min.
+
 Filename slugs should match the title's keyword shape — lowercase, hyphenated,
 trim filler. Examples:
 
@@ -107,13 +116,29 @@ trim filler. Examples:
 
 ## How the site consumes this
 
-The jackgierlich.com build pulls the file list via GitHub's REST API, fetches
-each `.md`, parses frontmatter, and bakes the feed into the bundle.
+Hybrid model:
 
-No runtime fetch — the site's CSP keeps `connect-src 'self'`.
+- **Build-time bake.** A script in jackgierlich.com fetches all `updates/*.md`
+  via the GitHub REST API, parses frontmatter with `gray-matter`, and writes
+  `src/generated/updates.json` before Vite runs. The feed gets baked into the
+  bundle — no runtime fetch for content, no rate-limit risk for viewers, tight
+  CSP (`connect-src 'self'` aside from the GitHub pulse — see below).
+- **Runtime pulse.** A small zustand store (`src/lib/githubLive.ts`) polls
+  `api.github.com/repos/Gr0wthHacker/updates` every 60s for the latest commit
+  SHA. If the SHA differs from the one baked into the bundle, the UI shows a
+  "new update available — rebuilding…" badge. Caches in localStorage with a
+  12h TTL to avoid burning the 60 req/hr unauthenticated quota.
 
-See [`schema/update.schema.json`](schema/update.schema.json) for a machine
-contract if you want to validate locally before pushing.
+See [`CONSUMING.md`](CONSUMING.md) for the wiring details and the build script
+shape.
+
+## Validating before push
+
+```bash
+# JSON Schema validation against schema/update.schema.json
+npx ajv-cli validate -s schema/update.schema.json -d "updates/*.md"
+# (or use any frontmatter-aware YAML validator that respects JSON Schema)
+```
 
 ## License
 
