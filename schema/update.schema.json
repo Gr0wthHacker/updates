@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Gr0wthHacker/updates/blob/main/schema/update.schema.json",
+  "title": "Update entry frontmatter",
+  "description": "Schema for the YAML frontmatter at the top of every updates/*.md file.",
+  "type": "object",
+  "required": ["title", "date", "category"],
+  "additionalProperties": false,
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 4,
+      "maxLength": 140,
+      "description": "Public-safe headline. Sentence-first. No date prefix."
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "ISO date of completion."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "system",
+        "launch",
+        "research",
+        "partnership",
+        "talk",
+        "essay",
+        "acquisition",
+        "milestone"
+      ],
+      "description": "Bucket the entry falls into. Extend the enum if a new shape is recurring."
+    },
+    "venture": {
+      "type": "string",
+      "enum": [
+        "leal-health",
+        "indexthread",
+        "actually-health",
+        "haba",
+        "multistatemd",
+        "whitecoat-alliance",
+        "personal"
+      ],
+      "description": "Which business / venture this update belongs to."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 32 },
+      "maxItems": 12,
+      "uniqueItems": true,
+      "description": "Free-form filter tags."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["shipped", "in-progress", "sunset"],
+      "default": "shipped"
+    },
+    "link": {
+      "oneOf": [
+        { "type": "string", "format": "uri" },
+        { "type": "null" }
+      ],
+      "description": "Optional public destination."
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$",
+      "maxLength": 80,
+      "description": "Override the filename-derived slug. Lowercase, hyphenated."
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["public", "draft"],
+      "default": "public",
+      "description": "Set to 'draft' to exclude from the consumed feed without deleting the file."
+    }
+  }
+}
