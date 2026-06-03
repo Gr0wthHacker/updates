@@ -1,0 +1,48 @@
+name: Trigger jackgierlich.com rebuild
+
+# Whenever an update lands on main, ping the Netlify build hook for code-desk
+# so the site picks up the new entry without a manual rebuild.
+#
+# Setup (one-time):
+#   1. In Netlify, go to: code-desk → Site settings → Build & deploy →
+#      Build hooks → Add build hook. Name it "updates-repo". Copy the URL.
+#   2. In this repo: Settings → Secrets and variables → Actions → New
+#      repository secret. Name: NETLIFY_BUILD_HOOK. Value: the URL.
+#   3. Done. Pushes to main here will rebuild jackgierlich.com.
+#
+# If the secret isn't set, the workflow no-ops with a friendly message
+# instead of failing.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'updates/**'
+      - 'schema/**'
+      - 'README.md'
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST to Netlify build hook
+        env:
+          HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::notice::NETLIFY_BUILD_HOOK secret not set; skipping rebuild trigger."
+            echo "::notice::Wire it up under Settings → Secrets to enable auto-rebuild."
+            exit 0
+          fi
+          echo "Pinging Netlify build hook..."
+          status=$(curl -s -o /tmp/resp -w "%{http_code}" -X POST -d '{}' "$HOOK")
+          echo "Netlify responded $status"
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "::error::Netlify hook returned non-2xx ($status)"
+            cat /tmp/resp || true
+            exit 1
+          fi
+          echo "::notice::Rebuild triggered. Live in ~2 minutes."
