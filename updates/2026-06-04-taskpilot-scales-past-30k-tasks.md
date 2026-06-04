@@ -3,13 +3,13 @@ title: "Made TaskPilot scale past 30k tasks"
 date: 2026-06-04
 category: system
 venture: personal
-tags: [taskpilot, infra, performance, sqlite, react]
+tags: [taskpilot, infrastructure, performance]
 status: shipped
 visibility: public
 ---
 
-TaskPilot started feeling laggy. Turned out a runaway auto-derive loop had multiplied 9 children into 33,000+ queued tasks, the watcher was iterating 33k unconsumed io files on every tick, and the renderer was fetching everything at once on every view open.
+TaskPilot was getting laggy. A background loop had quietly let the task queue grow past 30,000, and the app was loading everything into memory on every view open.
 
-Stopped the bleeding first — quarantined the io backlog, cancelled the duplicate tasks. Then hardened the loop so it can't repeat: cursor pagination plus a 200-row cap on the list endpoint, a `?fields=summary` projection that drops the heavy columns, composite indexes matching the actual ORDER BY clauses, a materialized `task_stats` table for sidebar badges, watcher move-on-ingest so processed files never get re-dispatched, and react-virtual on the high-volume views.
+Rebuilt the data path so size doesn't matter anymore. Lists page in as you scroll. The sidebar counts are pre-computed. Nothing scans more than it needs to. The app feels instant again, with headroom past 100,000 tasks before anything starts to bend.
 
-Result: list queries are sub-millisecond at any task count, the app feels instant, and the architecture should hold past 100k. If you're running an Electron + SQLite local-first app and starting to feel the lag, these are the cheapest five wins.
+If you're shipping a local-first app on a single-file database, these are the cheapest five things you can do — and they age well.
